@@ -1,7 +1,10 @@
 import transformers
 from torch import bfloat16
 from config import MODEL_ID
+from huggingface_hub import login
 
+
+login(token = 'my token')
 bnb_config = transformers.BitsAndBytesConfig(
     load_in_4bit=True,  # 4-bit quantization
     bnb_4bit_quant_type='nf4',  # Normalized float 4
