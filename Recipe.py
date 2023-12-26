@@ -1,27 +1,34 @@
 import transformers
-from torch import bfloat16
+from peft import PeftConfig, PeftModel
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
+
 from config import MODEL_ID
 from huggingface_hub import login
 
-
-login(token = 'my token')
 bnb_config = transformers.BitsAndBytesConfig(
     load_in_4bit=True,  # 4-bit quantization
     bnb_4bit_quant_type='nf4',  # Normalized float 4
     bnb_4bit_use_double_quant=True,  # Second quantization after the first
-    bnb_4bit_compute_dtype=bfloat16  # Computation type
+    bnb_4bit_compute_dtype=torch.bfloat16  # Computation type
 )
 
-model_id = MODEL_ID
-tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
-model = transformers.AutoModelForCausalLM.from_pretrained(
-    model_id,
-    # torch_dtype=torch.float16,  # Раскомментируйте для использования полупрецизионных вычислений
-    trust_remote_code=True,
-    quantization_config=bnb_config,
-    device_map='auto',
+config = PeftConfig.from_pretrained(MODEL_ID)
+model = AutoModelForCausalLM.from_pretrained(
+    config.base_model_name_or_path,
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+model = PeftModel.from_pretrained(
+    model,
+    MODEL_ID,
+    torch_dtype=torch.float16
 )
 model.eval()
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, use_fast=False)
+generation_config = GenerationConfig.from_pretrained(MODEL_ID)
+print(generation_config)
 
 system_prompt = """
 <s>[INST] <<SYS>>
@@ -48,7 +55,7 @@ main_prompt = """
 """
 
 generator = transformers.pipeline(
-    model=model, tokenizer=tokenizer,
+    model=MODEL_ID, tokenizer=tokenizer,
     task='text-generation',
     temperature=0.1,
     max_new_tokens=500,

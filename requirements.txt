@@ -53,3 +53,4 @@ urllib3==2.1.0
 yarl==1.9.4
 
 transformers~=4.36.2
+peft~=0.7.1
